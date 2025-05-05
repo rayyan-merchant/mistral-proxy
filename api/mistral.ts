@@ -1,29 +1,32 @@
-// This will be your API route on Vercel
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST allowed' });
-  }
-
-  const { prompt } = req.body;
-
+// api/mistral.ts
+export default async function handler(req: Request) {
   try {
-    const mistralRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    const body = await req.json();
+
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mistral-medium',
-        messages: [{ role: 'user', content: prompt }],
-      }),
+        model: 'mistral-small',
+        messages: body.messages,
+        temperature: 0.7
+      })
     });
 
-    const data = await mistralRes.json();
-    res.status(200).json(data);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch Mistral response' });
+    const data = await response.json();
+
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message || 'Something went wrong' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
